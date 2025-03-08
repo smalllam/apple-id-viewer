@@ -26,7 +26,7 @@
 
 ```bash
 # 下载并执行安装脚本
-curl -fsSL https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/install.sh?token=GHSAT0AAAAAAC7Z4533DRAHXTXCAZNDLUQGZ6MLUIQ | sudo bash
+curl -fsSL https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/install.sh | sudo bash
 ```
 
 ### 方法二：手动安装
@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads
 ```bash
 # 1. 确保已安装Docker和Docker Compose
 # 2. 下载部署脚本
-wget https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/setup.sh?token=GHSAT0AAAAAAC7Z4533XAQJ5C234EEKS4UKZ6MLU3A
+wget https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/setup.sh
 chmod +x setup.sh
 
 # 3. 运行部署脚本
