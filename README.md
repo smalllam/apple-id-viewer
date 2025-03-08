@@ -26,7 +26,7 @@
 
 ```bash
 # 下载并执行安装脚本
-curl -fsSL https://raw.githubusercontent.com/yourusername/apple-id-viewer/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/install.sh?token=GHSAT0AAAAAAC7Z4533DRAHXTXCAZNDLUQGZ6MLUIQ | sudo bash
 ```
 
 ### 方法二：手动安装
@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/yourusername/apple-id-viewer/main/i
 ```bash
 # 1. 确保已安装Docker和Docker Compose
 # 2. 下载部署脚本
-wget https://raw.githubusercontent.com/yourusername/apple-id-viewer/main/setup.sh
+wget https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/setup.sh?token=GHSAT0AAAAAAC7Z4533XAQJ5C234EEKS4UKZ6MLU3A
 chmod +x setup.sh
 
 # 3. 运行部署脚本
@@ -112,7 +112,7 @@ docker exec apple-id-mysql mysqldump -u root -p[ROOT密码] apple_id_db > backup
 
 如有任何问题或建议，请通过以下方式联系我们：
 
-- GitHub Issues: [提交问题](https://github.com/yourusername/apple-id-viewer/issues)
+- GitHub Issues: [提交问题](https://github.com/smalllam/apple-id-viewer/apple-id-viewer/issues)
 - 电子邮件: your-email@example.com
 
 ## 许可证
