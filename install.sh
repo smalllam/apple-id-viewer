@@ -66,7 +66,7 @@ echo -e "${GREEN}✅ Docker和Docker Compose安装完成!${NC}"
 # 下载设置脚本
 echo -e "${BLUE}[步骤 3/4]${NC} 下载一键部署脚本..."
 
-curl -s https://raw.githubusercontent.com/yourusername/apple-id-viewer/main/setup.sh -o setup.sh
+curl -s https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/setup.sh -o setup.sh
 chmod +x setup.sh
 
 echo -e "${GREEN}✅ 部署脚本下载完成!${NC}"
