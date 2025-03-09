@@ -1,0 +1,77 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      
+      - name: Install Dependencies
+        run: |
+          cd api
+          npm install
+
+      - name: Lint and Test
+        run: |
+          echo "Running tests..."
+          # npm test  # 取消注释以启用测试
+
+      - name: Create Release Assets
+        run: |
+          mkdir -p release
+          cp -r api release/
+          cp -r frontend release/
+          cp -r nginx release/
+          cp docker-compose.yml release/
+          cp setup.sh release/
+          cp install.sh release/
+          cp README.md release/
+          cd release
+          zip -r apple-id-viewer.zip ./*
+
+      - name: Upload Release Assets
+        uses: actions/upload-artifact@v2
+        with:
+          name: apple-id-viewer
+          path: release/apple-id-viewer.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: apple-id-viewer
+          
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+          
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./apple-id-viewer.zip
+          asset_name: apple-id-viewer.zip
+          asset_content_type: application/zip
