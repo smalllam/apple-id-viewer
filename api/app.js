@@ -41,48 +41,38 @@ if (!fs.existsSync(path.dirname(CONFIG.CACHE_FILE_PATH))) {
 // 创建数据库连接池
 const pool = mysql.createPool(CONFIG.DB);
 
-// 初始化数据库表 - 增强版本
+// 初始化数据库表
 async function initDatabase() {
-  let retries = 20;
-  while (retries > 0) {
-    try {
-      console.log(`尝试初始化数据库 (尝试 ${21-retries}/20)...`);
-      const connection = await pool.getConnection();
-      
-      // 创建账号数据表
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS accounts (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          username VARCHAR(255) NOT NULL,
-          password VARCHAR(255) NOT NULL,
-          country VARCHAR(50) NOT NULL,
-          check_time DATETIME NOT NULL,
-          status VARCHAR(50) NOT NULL
-        )
-      `);
-      
-      // 创建元数据表
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS metadata (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          key_name VARCHAR(50) UNIQUE NOT NULL,
-          value TEXT NOT NULL,
-          updated_at DATETIME NOT NULL
-        )
-      `);
-      
-      connection.release();
-      console.log('数据库初始化成功');
-      return true;
-    } catch (error) {
-      console.error(`数据库初始化尝试失败 (剩余 ${retries} 次): ${error.message}`);
-      retries--;
-      // Wait 5 seconds before retry
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
+  try {
+    const connection = await pool.getConnection();
+    
+    // 创建账号数据表
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        country VARCHAR(50) NOT NULL,
+        check_time DATETIME NOT NULL,
+        status VARCHAR(50) NOT NULL
+      )
+    `);
+    
+    // 创建元数据表
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS metadata (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        key_name VARCHAR(50) UNIQUE NOT NULL,
+        value TEXT NOT NULL,
+        updated_at DATETIME NOT NULL
+      )
+    `);
+    
+    connection.release();
+    console.log('数据库初始化成功');
+  } catch (error) {
+    console.error('数据库初始化失败:', error);
   }
-  console.error('数据库初始化失败，已达到最大重试次数');
-  return false;
 }
 
 // 从原始API获取数据
@@ -380,9 +370,12 @@ schedule.scheduleJob('0 * * * *', async function() {
   }
 });
 
-// 修改initServer函数，增强稳定性
+// 初始化服务器
 async function initServer() {
   try {
+    // 初始化数据库
+    await initDatabase();
+    
     // 启动服务器
     app.listen(PORT, () => {
       console.log(`API服务器运行在 http://localhost:${PORT}`);
@@ -393,39 +386,11 @@ async function initServer() {
       console.log('- 数据库用户:', CONFIG.DB.user);
     });
     
-    // 等待MySQL准备就绪（多次尝试）
-    console.log('等待数据库准备就绪...');
-    let dbInitialized = false;
-    let attempts = 30; // 30次尝试，每次5秒，最多等待150秒
-    
-    while (!dbInitialized && attempts > 0) {
-      try {
-        dbInitialized = await initDatabase();
-        if (dbInitialized) break;
-      } catch (error) {
-        console.error(`数据库初始化尝试失败 (剩余 ${attempts} 次): ${error.message}`);
-      }
-      
-      attempts--;
-      if (!dbInitialized && attempts > 0) {
-        console.log(`将在5秒后重试...剩余 ${attempts} 次尝试`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-    }
-    
-    if (!dbInitialized) {
-      console.error('无法初始化数据库，但应用将继续运行并使用文件缓存');
-    }
-    
-    // 服务启动后加载初始数据
+    // 服务启动后立即尝试获取数据
     try {
       console.log('初始化数据...');
       const apiData = await fetchFromOriginalApi();
-      
-      if (dbInitialized) {
-        await saveToDatabase(apiData);
-      }
-      
+      await saveToDatabase(apiData);
       saveToFileCache(apiData);
       console.log('初始数据获取成功');
     } catch (error) {
