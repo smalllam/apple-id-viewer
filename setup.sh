@@ -88,7 +88,7 @@ echo -e "${GREEN}✅ 参数配置完成!${NC}"
 # 创建Docker Compose配置文件
 echo -e "${BLUE}[步骤 4/6]${NC} 生成Docker配置文件..."
 
-# 修改这段代码
+# Inside setup.sh, update the docker-compose.yml creation
 cat > docker-compose.yml << EOF
 version: '3'
 
@@ -111,10 +111,15 @@ services:
       - ./api:/app
       - /app/node_modules
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # MySQL数据库
   mysql:
@@ -131,11 +136,11 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$DB_USER", "-p$DB_PASSWORD"]
-      interval: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$DB_USER", "-p$$DB_PASSWORD"]
+      interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 15s
+      retries: 5
+      start_period: 30s
 
   # Nginx服务器
   nginx:
