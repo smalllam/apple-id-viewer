@@ -386,6 +386,13 @@ async function initServer() {
       console.log('- 数据库用户:', CONFIG.DB.user);
     });
     
+    // 延迟10秒后初始化数据库，确保MySQL完全启动
+    console.log('等待10秒，确保数据库准备就绪...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    
+    // 初始化数据库
+    await initDatabase();
+    
     // 服务启动后立即尝试获取数据
     try {
       console.log('初始化数据...');
