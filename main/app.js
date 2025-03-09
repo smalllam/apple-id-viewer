@@ -70,8 +70,10 @@ async function initDatabase() {
     
     connection.release();
     console.log('数据库初始化成功');
+    return true;
   } catch (error) {
     console.error('数据库初始化失败:', error);
+    throw error;
   }
 }
 
@@ -373,9 +375,6 @@ schedule.scheduleJob('0 * * * *', async function() {
 // 初始化服务器
 async function initServer() {
   try {
-    // 初始化数据库
-    await initDatabase();
-    
     // 启动服务器
     app.listen(PORT, () => {
       console.log(`API服务器运行在 http://localhost:${PORT}`);
@@ -390,14 +389,43 @@ async function initServer() {
     console.log('等待10秒，确保数据库准备就绪...');
     await new Promise(resolve => setTimeout(resolve, 10000));
     
-    // 初始化数据库
-    await initDatabase();
+    // 添加重试逻辑
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    while (retryCount < maxRetries) {
+      try {
+        // 初始化数据库
+        await initDatabase();
+        console.log('数据库初始化成功');
+        break; // 成功则退出循环
+      } catch (error) {
+        retryCount++;
+        console.error(`数据库初始化失败 (尝试 ${retryCount}/${maxRetries}):`, error);
+        
+        if (retryCount >= maxRetries) {
+          console.error('达到最大重试次数，将使用文件缓存继续运行');
+        } else {
+          // 等待5秒后重试
+          console.log(`等待5秒后重试...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+    }
     
     // 服务启动后立即尝试获取数据
     try {
       console.log('初始化数据...');
       const apiData = await fetchFromOriginalApi();
-      await saveToDatabase(apiData);
+      
+      // 再次尝试保存数据到数据库，即使之前的初始化可能失败
+      try {
+        await saveToDatabase(apiData);
+      } catch (dbError) {
+        console.error('保存到数据库失败，将只使用文件缓存:', dbError);
+      }
+      
+      // 文件缓存通常更可靠，总是尝试保存
       saveToFileCache(apiData);
       console.log('初始数据获取成功');
     } catch (error) {
