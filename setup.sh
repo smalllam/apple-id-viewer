@@ -232,7 +232,7 @@ echo -e "${BLUE}[步骤 5/6]${NC} 下载应用代码..."
 curl -s https://raw.githubusercontent.com/yourusername/apple-id-viewer/main/app.js -o api/app.js
 
 # 下载前端文件
-curl -s https://raw.githubusercontent.com/yourusername/apple-id-viewer/main/index.html -o frontend/index.html
+curl -s https://raw.githubusercontent.com/smalllam/apple-id-viewer/refs/heads/main/main/index.html -o frontend/index.html
 
 echo -e "${GREEN}✅ 应用代码下载完成!${NC}"
 
