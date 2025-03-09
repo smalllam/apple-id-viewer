@@ -88,6 +88,7 @@ echo -e "${GREEN}✅ 参数配置完成!${NC}"
 # 创建Docker Compose配置文件
 echo -e "${BLUE}[步骤 4/6]${NC} 生成Docker配置文件..."
 
+# 修改这段代码
 cat > docker-compose.yml << EOF
 version: '3'
 
@@ -110,7 +111,8 @@ services:
       - ./api:/app
       - /app/node_modules
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -128,6 +130,12 @@ services:
       - mysql-data:/var/lib/mysql
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$DB_USER", "-p$DB_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   # Nginx服务器
   nginx:
