@@ -1,736 +1,448 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>苹果ID查看器</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <style>
-        body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            padding: 20px;
-        }
-        .card {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            border-left: 4px solid #4caf50;
-            background-color: white;
-            transition: transform 0.2s ease;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        .card-body {
-            padding: 20px;
-        }
-        .card-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .badge {
-            font-size: 12px;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        .btn {
-            margin-right: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            padding: 6px 12px;
-        }
-        .btn-primary {
-            background-color: #2196f3;
-            border-color: #2196f3;
-        }
-        .btn-success {
-            background-color: #4caf50;
-            border-color: #4caf50;
-        }
-        .accounts-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-        }
-        @media (max-width: 768px) {
-            .accounts-container {
-                grid-template-columns: 1fr;
-            }
-        }
-        #alertBox {
-            display: none;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px;
-            background-color: #4caf50;
-            color: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #666;
-        }
-        .loading-spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            margin-bottom: 10px;
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top-color: #2196f3;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .refresh-btn {
-            background-color: #2196f3;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 6px 12px;
-        }
-        .warning-text {
-            color: #ff0000;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background-color: #4caf50;
-            color: white;
-            border-radius: 4px;
-            margin-left: 8px;
-        }
-        .email-display {
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        .data-source-indicator {
-            display: inline-block;
-            margin-left: 10px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .source-api {
-            background-color: #4caf50;
-            color: white;
-        }
-        .source-database {
-            background-color: #2196f3;
-            color: white;
-        }
-        .source-file {
-            background-color: #ff9800;
-            color: white;
-        }
-        .source-sample {
-            background-color: #f44336;
-            color: white;
-        }
-        
-        /* 添加背景遮罩 */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* 半透明黑色 */
-            z-index: 9998;
-            display: none;
-        }
-        
-        /* 更新后的中央提示框样式 */
-        .center-alert {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            color: #333;
-            font-size: 18px;
-            font-weight: 600;
-            padding: 15px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            z-index: 9999;
-            min-width: 200px;
-            text-align: center;
-            display: none;
-            overflow: hidden;
-        }
-        
-        /* 进度条样式 - 修改为宽度增长方式 */
-        .center-alert-progress {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 3px;
-            background: linear-gradient(to right, #4caf50, #2196f3, #9c27b0); /* 更丰富的渐变色 */
-            width: 0%; /* 初始宽度为0 */
-            opacity: 0.8;
-        }
-        
-        /* 进度条动画 - 修改为宽度增长 */
-        @keyframes progressAnimation {
-            0% {
-                width: 0%;
-            }
-            100% {
-                width: 100%;
-            }
-        }
-        
-        /* 复制按钮悬停效果 */
-        .btn-primary:hover, .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s ease;
-        }
-        
-        /* 按钮点击效果 */
-        .btn-primary:active, .btn-success:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* 可选：按钮样式优化 */
-        .btn-primary, .btn-success {
-            transition: all 0.2s ease;
-            font-weight: 500;
-            border-radius: 4px;
-            padding: 8px 16px;
-        }
-    </style>
-</head>
-<body>
-<!-- 🔹 顶部提示 -->
-<div class="alert text-center" role="alert" style="font-size: 20pt; font-weight: bold; padding: 15px; border-radius: 8px; color: #856404; display: flex; justify-content: center; align-items: center; text-align: center;">
-    <div>
-      <span style="color: #e03e2d; font-size: 40pt; font-weight: bolder;">
-        ⚠️ 注意 ⚠️
-      </span><br>
-      <span style="color: #236fa1; font-size: 16pt;">🚫 以下账户</span>
-      <span style="color: #e03e2d; font-size: 16pt;"> 请勿在设置</span>
-      <span style="color: #236fa1; font-size: 16pt;"> 中登录！</span><br>
-      <span style="color: #236fa1; font-size: 16pt;"> ✅ 只需要在</span>
-      <span style="color: #2dc26b; font-size: 16pt;"> App Store</span>
-      <span style="color: #236fa1; font-size: 16pt;"> 中登录！</span>
-    </div>
-  </div>
-<h2 style="text-align: center;">
-    <strong>
-        <span style="color: #236fa1; font-size: 18pt;">🔗<a style="color: #236fa1;" href="https://fo2.netfly.life" target="_blank" rel="noopener">点击访问官网</a>:</span>
-        <a href="https://fo2.netfly.life/" target="_blank" rel="noopener">
-            <span style="font-size: 18pt; color: #e03e2d;">fo2.netfly.life</span>
-        </a>
-    </strong>
-    <strong>
-        <span style="font-size: 18pt; color: #e03e2d;">🔗</span>
-    </strong>
-</h2>
-    <div class="container">
-        <div class="header">
-            <h2>账号列表</h2>
-            <div>
-                上次更新: <span id="updateTimestamp">加载中...</span>
-                <span id="dataSourceIndicator" class="data-source-indicator">加载中...</span>
-                <button id="refreshBtn" class="refresh-btn">刷新</button>
-            </div>
-        </div>
-        <div class="accounts-container" id="accountsContainer">
-            <!-- 账号卡片将在此动态生成 -->
-            <div class="loading">
-                <div class="loading-spinner"></div>
-                <p>正在加载账号数据...</p>
-            </div>
-        </div>
-    </div>
-    <div id="alertBox"></div>
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const mysql = require('mysql2/promise');
+const schedule = require('node-schedule');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// 中间件配置
+app.use(express.json());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// 配置
+const CONFIG = {
+  ORIGINAL_API_URL: process.env.ORIGINAL_API_URL || 'https://apple-id.small-lam1814.workers.dev/api/accounts',
+  CACHE_FILE_PATH: path.join(__dirname, 'cache', 'accounts_data.json'),
+  CACHE_TTL: 60 * 60 * 1000, // 缓存有效期（1小时，毫秒）
+  API_TIMEOUT: 5000, // API请求超时时间（毫秒）
+  
+  // 数据库配置 - 使用环境变量
+  DB: {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'apple_id_user',
+    password: process.env.DB_PASSWORD || 'secure_password',
+    database: process.env.DB_NAME || 'apple_id_db'
+  }
+};
+
+// 确保缓存目录存在
+if (!fs.existsSync(path.dirname(CONFIG.CACHE_FILE_PATH))) {
+  fs.mkdirSync(path.dirname(CONFIG.CACHE_FILE_PATH), { recursive: true });
+}
+
+// 创建数据库连接池
+const pool = mysql.createPool(CONFIG.DB);
+
+// 初始化数据库表 - 添加重试逻辑
+async function initDatabase() {
+  let retries = 20;
+  while (retries > 0) {
+    try {
+      console.log(`尝试连接数据库并初始化表 (尝试 ${21 - retries}/20)...`);
+      const connection = await pool.getConnection();
+      
+      // 创建账号数据表
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS accounts (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          username VARCHAR(255) NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          country VARCHAR(50) NOT NULL,
+          check_time DATETIME NOT NULL,
+          status VARCHAR(50) NOT NULL
+        )
+      `);
+      
+      // 创建元数据表
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS metadata (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          key_name VARCHAR(50) UNIQUE NOT NULL,
+          value TEXT NOT NULL,
+          updated_at DATETIME NOT NULL
+        )
+      `);
+      
+      connection.release();
+      console.log('数据库初始化成功');
+      return true;
+    } catch (error) {
+      console.error(`数据库初始化尝试失败 (剩余 ${retries} 次): ${error.message}`);
+      retries--;
+      // 等待5秒后重试
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+  console.error('数据库初始化失败，已达到最大重试次数');
+  return false;
+}
+
+// 从原始API获取数据
+async function fetchFromOriginalApi() {
+  try {
+    console.log('正在从原始API获取数据...');
+    console.log('API URL:', CONFIG.ORIGINAL_API_URL);
     
-    <!-- 添加背景遮罩 -->
-    <div id="overlay" class="overlay"></div>
+    const response = await axios.get(CONFIG.ORIGINAL_API_URL, {
+      timeout: CONFIG.API_TIMEOUT
+    });
     
-    <!-- 更新的中央提示框，包含进度条 -->
-    <div id="centerAlert" class="center-alert">
-        <span id="alertText">复制成功</span>
-        <div id="alertProgress" class="center-alert-progress"></div>
-    </div>
+    if (response.status !== 200) {
+      throw new Error(`API返回错误状态: ${response.status}`);
+    }
     
-    <script>
-        // 添加反调试和反爬虫保护
-        (function() {
-            // 禁用右键菜单
-            document.addEventListener('contextmenu', e => e.preventDefault());
-            
-            // 禁用F12、Ctrl+Shift+I等开发者工具快捷键
-            document.addEventListener('keydown', function(e) {
-                if (
-                    // F12
-                    e.keyCode === 123 || 
-                    // Ctrl+Shift+I
-                    (e.ctrlKey && e.shiftKey && e.keyCode === 73) || 
-                    // Ctrl+Shift+J
-                    (e.ctrlKey && e.shiftKey && e.keyCode === 74) || 
-                    // Ctrl+Shift+C
-                    (e.ctrlKey && e.shiftKey && e.keyCode === 67) ||
-                    // Ctrl+U (查看源代码)
-                    (e.ctrlKey && e.keyCode === 85)
-                ) {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-            
-            // 混淆API调用路径
-            const originalFetch = window.fetch;
-            window.fetch = function(url, options) {
-                // 在网络请求中添加随机参数，防止缓存和分析
-                if(url.includes('/api/')) {
-                    const separator = url.includes('?') ? '&' : '?';
-                    url = `${url}${separator}_=${Math.random().toString(36).substring(2)}`;
-                }
-                return originalFetch(url, options);
-            };
-        })();
-        
-        // 配置选项 - 使用相对路径，不需要完整URL
-        const CONFIG = {
-            API_URL: '/api/accounts', // 通过Nginx反向代理连接到Node.js服务
-            SCRAPE_URL: '/api/scrape', // 通过Nginx反向代理连接到Node.js服务
-            API_TIMEOUT: 5000, // 5秒API超时
-            AUTO_REFRESH_INTERVAL: 60000, // 自动刷新间隔（毫秒）
-            ALERT_DURATION: 1500, // 提示框显示时间（毫秒）
-            LOCAL_STORAGE_KEY: 'accountsData', // 本地存储键名（作为最后的备份）
-            MAX_CACHE_AGE: 60 * 60 * 1000 // 本地缓存有效期（1小时）
-        };
-        
-        // DOM 元素
-        const accountsContainer = document.getElementById('accountsContainer');
-        const alertBox = document.getElementById('alertBox');
-        const centerAlert = document.getElementById('centerAlert');
-        const alertText = document.getElementById('alertText');
-        const alertProgress = document.getElementById('alertProgress');
-        const overlay = document.getElementById('overlay');
-        const refreshBtn = document.getElementById('refreshBtn');
-        const updateTimestamp = document.getElementById('updateTimestamp');
-        const dataSourceIndicator = document.getElementById('dataSourceIndicator');
-        
-        // 变量
-        let isRefreshing = false;
-        let dataSource = '';
-        
-        // 更新后的显示提示框函数
-        function showAlert(message, type = 'success') {
-            alertText.textContent = message;
-            centerAlert.style.display = 'block';
-            overlay.style.display = 'block'; // 显示背景遮罩
+    const data = response.data;
     
-            if (type === 'success') {
-                centerAlert.style.backgroundColor = 'white';
-                alertText.style.color = '#333';
-            } else if (type === 'error') {
-                centerAlert.style.backgroundColor = '#f44336';
-                alertText.style.color = 'white';
-            } else if (type === 'warning') {
-                centerAlert.style.backgroundColor = '#ff9800';
-                alertText.style.color = 'white';
-            }
+    // 添加时间戳（如果原始API没有提供）
+    return {
+      accounts: data.accounts || data, // 适应不同的API响应格式
+      timestamp: data.timestamp || new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('从原始API获取数据失败:', error.message);
+    throw error;
+  }
+}
+
+// 将数据保存到数据库
+async function saveToDatabase(data) {
+  let connection;
+  try {
+    connection = await pool.getConnection();
     
-            // 重置并开始进度条动画
-            alertProgress.style.animation = 'none';
-            alertProgress.offsetWidth; // 触发重绘
-            alertProgress.style.animation = 'progressAnimation 1.5s linear forwards';
-            
-            // 自动隐藏提示框和背景
-            setTimeout(() => {
-                centerAlert.style.display = 'none';
-                overlay.style.display = 'none';
-            }, CONFIG.ALERT_DURATION);
+    await connection.beginTransaction();
+    
+    // 清空账号表
+    await connection.execute('TRUNCATE TABLE accounts');
+    
+    // 插入新账号数据
+    for (const account of data.accounts) {
+      await connection.execute(
+        'INSERT INTO accounts (username, password, country, check_time, status) VALUES (?, ?, ?, ?, ?)',
+        [
+          account.username,
+          account.password,
+          account.country,
+          new Date(account.checkTime), // 假设checkTime是ISO格式的日期字符串
+          account.status
+        ]
+      );
+    }
+    
+    // 更新元数据
+    await connection.execute(
+      'INSERT INTO metadata (key_name, value, updated_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = ?, updated_at = ?',
+      [
+        'last_update',
+        JSON.stringify({ timestamp: data.timestamp }),
+        new Date(),
+        JSON.stringify({ timestamp: data.timestamp }),
+        new Date()
+      ]
+    );
+    
+    await connection.commit();
+    console.log('数据成功保存到数据库');
+    return true;
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error('保存数据到数据库失败:', error);
+    return false;
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+}
+
+// 将数据保存到文件缓存
+function saveToFileCache(data) {
+  try {
+    const dataToCache = {
+      ...data,
+      cachedAt: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(CONFIG.CACHE_FILE_PATH, JSON.stringify(dataToCache, null, 2));
+    console.log('数据已成功存储到文件缓存');
+    return true;
+  } catch (error) {
+    console.error('存储到文件缓存失败:', error);
+    return false;
+  }
+}
+
+// 从数据库获取数据
+async function getFromDatabase() {
+  try {
+    const connection = await pool.getConnection();
+    
+    // 获取账号数据
+    const [accounts] = await connection.execute('SELECT username, password, country, check_time as checkTime, status FROM accounts');
+    
+    // 获取最后更新时间
+    const [metadataRows] = await connection.execute('SELECT value FROM metadata WHERE key_name = ?', ['last_update']);
+    
+    connection.release();
+    
+    if (accounts.length === 0) {
+      console.log('数据库中没有账号数据');
+      return null;
+    }
+    
+    // 格式化日期
+    accounts.forEach(account => {
+      if (account.checkTime instanceof Date) {
+        account.checkTime = account.checkTime.toISOString().replace('T', ' ').substring(0, 19);
+      }
+    });
+    
+    let timestamp = new Date().toISOString();
+    if (metadataRows.length > 0) {
+      const metadata = JSON.parse(metadataRows[0].value);
+      timestamp = metadata.timestamp || timestamp;
+    }
+    
+    console.log('成功从数据库获取数据');
+    return {
+      accounts,
+      timestamp
+    };
+  } catch (error) {
+    console.error('从数据库获取数据失败:', error);
+    return null;
+  }
+}
+
+// 从文件缓存获取数据
+function getFromFileCache() {
+  try {
+    if (!fs.existsSync(CONFIG.CACHE_FILE_PATH)) {
+      console.log('文件缓存不存在');
+      return null;
+    }
+    
+    const fileData = fs.readFileSync(CONFIG.CACHE_FILE_PATH, 'utf8');
+    const cachedData = JSON.parse(fileData);
+    
+    // 检查缓存是否过期
+    const cachedAt = new Date(cachedData.cachedAt);
+    const now = new Date();
+    if (now - cachedAt > CONFIG.CACHE_TTL) {
+      console.log('文件缓存已过期');
+      return null;
+    }
+    
+    console.log('成功从文件缓存获取数据');
+    return cachedData;
+  } catch (error) {
+    console.error('从文件缓存获取数据失败:', error);
+    return null;
+  }
+}
+
+// 获取示例数据
+function getSampleData() {
+  return {
+    accounts: [
+      {
+        username: 'jebnslz90o68zdz@hotmail.com',
+        password: 'Password123',
+        country: '美国',
+        checkTime: '2025-02-25 19:05:45',
+        status: '正常'
+      },
+      {
+        username: 'e0vg8xlw@qq.com',
+        password: 'Password456',
+        country: '美国',
+        checkTime: '2025-02-25 19:05:45',
+        status: '正常'
+      },
+      {
+        username: 'alejandromepc63@gmail.com',
+        password: 'Password789',
+        country: '美国',
+        checkTime: '2025-02-25 19:05:48',
+        status: '正常'
+      }
+    ],
+    timestamp: new Date().toISOString()
+  };
+}
+
+// 获取账户数据的主函数
+async function getAccountsData() {
+  try {
+    // 1. 尝试从原始API获取数据
+    try {
+      const apiData = await fetchFromOriginalApi();
+      // 保存数据到数据库和文件缓存
+      await saveToDatabase(apiData);
+      saveToFileCache(apiData);
+      return { ...apiData, source: 'api' };
+    } catch (error) {
+      console.log('将尝试从数据库获取缓存数据...');
+    }
+    
+    // 2. 尝试从数据库获取数据
+    const dbData = await getFromDatabase();
+    if (dbData) {
+      return { ...dbData, source: 'database' };
+    }
+    
+    // 3. 尝试从文件缓存获取数据
+    const fileData = getFromFileCache();
+    if (fileData) {
+      return { ...fileData, source: 'file_cache' };
+    }
+    
+    // 4. 使用示例数据
+    return { ...getSampleData(), source: 'sample' };
+  } catch (error) {
+    console.error('获取账户数据失败:', error);
+    return { ...getSampleData(), source: 'sample', error: error.message };
+  }
+}
+
+// API路由
+app.get('/api/accounts', async (req, res) => {
+  try {
+    const data = await getAccountsData();
+    res.json(data);
+  } catch (error) {
+    console.error('获取账号数据失败:', error);
+    res.status(500).json({
+      error: '获取账号数据失败',
+      message: error.message,
+      accounts: getSampleData().accounts,
+      timestamp: new Date().toISOString(),
+      source: 'sample'
+    });
+  }
+});
+
+// 手动触发数据更新
+app.post('/api/scrape', async (req, res) => {
+  try {
+    // 强制从原始API获取新数据
+    const apiData = await fetchFromOriginalApi();
+    
+    // 保存数据到数据库和文件缓存
+    const dbSaveResult = await saveToDatabase(apiData);
+    const fileSaveResult = saveToFileCache(apiData);
+    
+    res.json({
+      success: true,
+      message: '数据更新成功',
+      databaseSaved: dbSaveResult,
+      fileCacheSaved: fileSaveResult,
+      timestamp: apiData.timestamp
+    });
+  } catch (error) {
+    console.error('更新数据失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '更新数据失败',
+      message: error.message
+    });
+  }
+});
+
+// 健康检查端点
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    config: {
+      api_url: CONFIG.ORIGINAL_API_URL,
+      db_host: CONFIG.DB.host,
+      db_name: CONFIG.DB.database
+    }
+  });
+});
+
+// 设置定时任务，每小时更新一次数据
+schedule.scheduleJob('0 * * * *', async function() {
+  console.log('开始执行定时数据更新...');
+  try {
+    const apiData = await fetchFromOriginalApi();
+    await saveToDatabase(apiData);
+    saveToFileCache(apiData);
+    console.log('定时数据更新成功');
+  } catch (error) {
+    console.error('定时数据更新失败:', error);
+  }
+});
+
+// 初始化服务器 - 改进的启动流程
+async function initServer() {
+  try {
+    // 启动服务器
+    app.listen(PORT, () => {
+      console.log(`API服务器运行在 http://localhost:${PORT}`);
+      console.log('配置信息:');
+      console.log('- 原始API URL:', CONFIG.ORIGINAL_API_URL);
+      console.log('- 数据库主机:', CONFIG.DB.host);
+      console.log('- 数据库名称:', CONFIG.DB.database);
+      console.log('- 数据库用户:', CONFIG.DB.user);
+    });
+    
+    // 等待MySQL完全启动并重试数据库初始化
+    console.log('等待数据库准备就绪...');
+    let dbInitialized = false;
+    let attempts = 30; // 30次尝试，每次5秒 = 最多等待150秒
+    
+    while (!dbInitialized && attempts > 0) {
+      try {
+        dbInitialized = await initDatabase();
+        if (dbInitialized) {
+          console.log('数据库初始化成功');
+          break;
         }
-        
-        // 复制到剪贴板函数
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    showAlert('复制成功');
-                })
-                .catch(err => {
-                    console.error('复制失败:', err);
-                    
-                    // 兼容性处理
-                    const textarea = document.createElement('textarea');
-                    textarea.value = text;
-                    textarea.style.position = 'fixed';
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    
-                    try {
-                        const successful = document.execCommand('copy');
-                        if (successful) {
-                            showAlert('复制成功');
-                        } else {
-                            showAlert('复制失败，请手动复制', 'error');
-                        }
-                    } catch (err) {
-                        showAlert('复制失败，请手动复制', 'error');
-                    }
-                    
-                    document.body.removeChild(textarea);
-                });
-        }
-        
-        // 示例账号数据和其他函数保持不变...
-        
-        // 示例账号数据 - 仅在所有其他方法都失败时使用
-        const sampleAccounts = [
-            {
-                username: 'jebnslz90o68zdz@hotmail.com',
-                password: 'Password123',
-                country: '美国',
-                checkTime: '2025-02-25 19:05:45',
-                status: '正常'
-            },
-            {
-                username: 'e0vg8xlw@qq.com',
-                password: 'Password456',
-                country: '美国',
-                checkTime: '2025-02-25 19:05:45',
-                status: '正常'
-            },
-            {
-                username: 'alejandromepc63@gmail.com',
-                password: 'Password789',
-                country: '美国',
-                checkTime: '2025-02-25 19:05:48',
-                status: '正常'
-            }
-        ];
-        
-        // 显示账号
-        function displayAccounts(accounts) {
-            accountsContainer.innerHTML = '';
-            
-            accounts.forEach(account => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                
-                card.innerHTML = `
-                    <div class="card-body">
-                        <h3 class="card-title">账号信息</h3>
-                        <div class="email-display">${account.username} <span class="badge bg-primary">${account.country}</span></div>
-                        <p>账号信息:</p>
-                        <p><span class="warning-text">📄 如状态异常，或者需要验证码，请5分钟后刷新网页，或使用其他账号</span></p>
-                        <p>上次检查: ${account.checkTime}</p>
-                        <p>状态: <span class="status-badge">${account.status}</span></p>
-                        <div style="margin: 15px 0;">
-                            <button class="btn btn-primary" onclick="copyToClipboard('${account.username}')">复制账号</button>
-                            <button class="btn btn-success" onclick="copyToClipboard('${account.password}')">复制密码</button>
-                        </div>
-                    </div>
-                `;
-                
-                accountsContainer.appendChild(card);
-            });
-            
-            // 更新数据源指示器
-            updateDataSourceIndicator();
-        }
-        
-        // 其余函数保持不变...
-        
-        // 更新数据来源指示器
-        function updateDataSourceIndicator() {
-            let text, className;
-            
-            switch(dataSource) {
-                case 'api':
-                    text = '实时数据';
-                    className = 'data-source-indicator source-api';
-                    break;
-                case 'database':
-                    text = '数据库缓存';
-                    className = 'data-source-indicator source-database';
-                    break;
-                case 'file_cache':
-                    text = '文件缓存数据';
-                    className = 'data-source-indicator source-file';
-                    break;
-                case 'sample':
-                    text = '示例数据';
-                    className = 'data-source-indicator source-sample';
-                    break;
-                default:
-                    text = '本地存储数据';
-                    className = 'data-source-indicator source-file';
-            }
-            
-            dataSourceIndicator.textContent = text;
-            dataSourceIndicator.className = className;
-        }
-        
-        // 保存数据到本地存储 - 作为额外的备份
-        function saveDataToLocalStorage(data) {
-            try {
-                const dataToSave = {
-                    accounts: data.accounts,
-                    timestamp: data.timestamp,
-                    source: data.source,
-                    savedAt: new Date().toISOString()
-                };
-                localStorage.setItem(CONFIG.LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
-                console.log('数据已保存到本地存储');
-            } catch (error) {
-                console.error('保存数据到本地存储失败:', error);
-            }
-        }
-        
-        // 从本地存储获取数据 - 作为最后的备份
-        function getDataFromLocalStorage() {
-            try {
-                const storedData = localStorage.getItem(CONFIG.LOCAL_STORAGE_KEY);
-                if (!storedData) return null;
-                
-                const data = JSON.parse(storedData);
-                const savedAt = new Date(data.savedAt);
-                const now = new Date();
-                const ageInMs = now - savedAt;
-                
-                // 检查缓存是否过期（超过MAX_CACHE_AGE）
-                if (ageInMs > CONFIG.MAX_CACHE_AGE) {
-                    console.log('本地缓存数据已过期');
-                    return null;
-                }
-                
-                return data;
-            } catch (error) {
-                console.error('从本地存储获取数据失败:', error);
-                return null;
-            }
-        }
-        
-        // 带超时的fetch请求
-        function fetchWithTimeout(url, options = {}, timeout = CONFIG.API_TIMEOUT) {
-            return new Promise((resolve, reject) => {
-                // 设置超时计时器
-                const timer = setTimeout(() => {
-                    reject(new Error('请求超时'));
-                }, timeout);
-                
-                fetch(url, options)
-                    .then(response => {
-                        clearTimeout(timer);
-                        resolve(response);
-                    })
-                    .catch(error => {
-                        clearTimeout(timer);
-                        reject(error);
-                    });
-            });
-        }
-        
-        // 格式化日期时间
-        function formatDateTime(dateTimeStr) {
-            const date = new Date(dateTimeStr);
-            return date.toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        }
-        
-        // 从API获取账号数据
-        function fetchAccountsData() {
-            return fetchWithTimeout(CONFIG.API_URL)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('获取账号数据失败，状态码: ' + response.status);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // 数据获取成功，保存到本地存储作为额外的备份
-                    saveDataToLocalStorage(data);
-                    
-                    // 记录数据来源
-                    dataSource = data.source || 'api';
-                    
-                    return data;
-                })
-                .catch(error => {
-                    console.error('API请求失败:', error);
-                    
-                    // 尝试从本地存储获取数据
-                    const cachedData = getDataFromLocalStorage();
-                    if (cachedData) {
-                        dataSource = 'local_storage';
-                        console.log('使用本地缓存数据（API不可用或超时）');
-                        return cachedData;
-                    }
-                    
-                    // 如果没有缓存数据，则返回样本数据
-                    dataSource = 'sample';
-                    return {
-                        accounts: sampleAccounts,
-                        timestamp: new Date().toISOString(),
-                        source: 'sample'
-                    };
-                });
-        }
-        
-        // 手动触发爬取/更新数据
-        function triggerScrape() {
-            if (isRefreshing) return Promise.reject(new Error('正在刷新中'));
-            
-            isRefreshing = true;
-            refreshBtn.textContent = '刷新中...';
-            refreshBtn.disabled = true;
-            
-            // 显示加载状态
-            accountsContainer.innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>正在刷新数据...</p>
-                </div>
-            `;
-            
-            return fetchWithTimeout(CONFIG.SCRAPE_URL, {
-                method: 'POST'
-            }, CONFIG.API_TIMEOUT * 2) // 给更新操作更多时间
-            .then(response => response.json())
-            .then(data => {
-                console.log('更新结果:', data);
-                if (data.success) {
-                    showAlert('数据刷新成功', 'success');
-                } else {
-                    showAlert(data.message || '刷新失败', 'error');
-                }
-                return fetchAccountsData();
-            })
-            .catch(error => {
-                console.error('更新操作失败:', error);
-                showAlert('刷新失败: ' + error.message, 'error');
-                
-                return fetchAccountsData(); // 尝试获取现有数据
-            })
-            .finally(() => {
-                isRefreshing = false;
-                refreshBtn.textContent = '刷新';
-                refreshBtn.disabled = false;
-            });
-        }
-        
-        // 初始化应用
-        function initApp() {
-            // 获取数据
-            fetchAccountsData()
-                .then(data => {
-                    updateTimestamp.textContent = formatDateTime(data.timestamp);
-                    displayAccounts(data.accounts);
-                    
-                    // 设置自动刷新
-                    setInterval(() => {
-                        if (!isRefreshing) {
-                            console.log('执行自动刷新...');
-                            fetchAccountsData()
-                                .then(newData => {
-                                    updateTimestamp.textContent = formatDateTime(newData.timestamp);
-                                    displayAccounts(newData.accounts);
-                                })
-                                .catch(error => {
-                                    console.error('自动刷新失败:', error);
-                                });
-                        }
-                    }, CONFIG.AUTO_REFRESH_INTERVAL);
-                })
-                .catch(error => {
-                    console.error('获取初始数据失败:', error);
-                    
-                    // 显示示例数据
-                    dataSource = 'sample';
-                    displayAccounts(sampleAccounts);
-                    updateTimestamp.textContent = formatDateTime(new Date().toISOString());
-                });
-            
-            // 刷新按钮点击事件处理程序
-            refreshBtn.addEventListener('click', () => {
-                if (!isRefreshing) {
-                    isRefreshing = true;
-                    refreshBtn.textContent = '刷新中...';
-                    refreshBtn.disabled = true;
-                    
-                    // 修改刷新请求，添加明确的headers
-                    fetch('/api/scrape', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({}) // 发送空的JSON对象
-                    })
-                    .then(response => {
-                        if (!response.ok) throw new Error('请求失败: ' + response.status);
-                        return response.json();
-                    })
-                    .then(data => {
-                        showAlert('数据刷新成功', 'success');
-                        return fetchAccountsData();
-                    })
-                    .then(data => {
-                        updateTimestamp.textContent = formatDateTime(data.timestamp);
-                        displayAccounts(data.accounts);
-                    })
-                    .catch(error => {
-                        console.error('刷新失败:', error);
-                        showAlert('刷新失败，尝试获取现有数据', 'warning');
-                        
-                        // 即使刷新失败，也尝试获取现有数据
-                        return fetchAccountsData()
-                        .then(data => {
-                            updateTimestamp.textContent = formatDateTime(data.timestamp);
-                            displayAccounts(data.accounts);
-                        });
-                    })
-                    .finally(() => {
-                        isRefreshing = false;
-                        refreshBtn.textContent = '刷新';
-                        refreshBtn.disabled = false;
-                    });
-                } else {
-                    showAlert('正在刷新中，请稍候...', 'warning');
-                }
-            });
-        }
-        
-        // 页面加载后初始化应用
-        document.addEventListener('DOMContentLoaded', initApp);
-        
-    </script>
-    <script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="ef24c916-5968-4f7a-88c7-830488dc2948";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();</script>
-</body>
-</html>
+      } catch (error) {
+        console.error(`数据库初始化尝试失败 (剩余 ${attempts} 次): ${error.message}`);
+      }
+      
+      attempts--;
+      if (!dbInitialized && attempts > 0) {
+        console.log(`将在5秒后重试...剩余 ${attempts} 次尝试`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
+    
+    if (!dbInitialized) {
+      console.error('无法初始化数据库，但应用将继续运行并使用文件缓存');
+    }
+    
+    // 服务启动后尝试获取数据
+    try {
+      console.log('初始化数据...');
+      const apiData = await fetchFromOriginalApi();
+      
+      if (dbInitialized) {
+        await saveToDatabase(apiData);
+      }
+      
+      saveToFileCache(apiData);
+      console.log('初始数据获取成功');
+    } catch (error) {
+      console.error('初始数据获取失败:', error);
+    }
+  } catch (error) {
+    console.error('服务器初始化失败:', error);
+  }
+}
+
+// 启动服务器
+initServer();
